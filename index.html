@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Health Scan Demo</title>
+</head>
+<body>
+  <h1>📷 Health Scan Demo</h1>
+  <video id="camera" autoplay playsinline width="300"></video>
+  <p id="score">Gesundheits-Score: -</p>
+  <p id="details"></p>
+
+  <script>
+    const video = document.getElementById('camera');
+    const scoreText = document.getElementById('score');
+    const detailsText = document.getElementById('details');
+
+    // Kamera starten
+    async function startCamera() {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+    }
+
+    startCamera();
+
+    // Platzhalter: Später hier API-Aufruf zu OpenAI Vision einbauen
+    function mockAnalyse() {
+      const randomScore = Math.floor(Math.random() * 10) + 1;
+      scoreText.textContent = `Gesundheits-Score: ${randomScore}`;
+      detailsText.textContent = randomScore > 5 
+        ? "✅ Viele Vorteile – wahrscheinlich gesund."
+        : "⚠️ Enthält eher ungesunde Bestandteile.";
+    }
+
+    setInterval(mockAnalyse, 3000);
+  </script>
+</body>
+</html>
