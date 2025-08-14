@@ -1,73 +1,59 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Health Scan Demo</title>
-</head>
-<body>
-  <h1>📷 Health Scan Demo</h1>
-  <video id="camera" autoplay playsinline width="300"></video>
-  <br />
-  <button id="scanBtn">Analysieren</button>
-  <p id="score">Gesundheits-Score: -</p>
-  <p id="details"></p>
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Only POST requests allowed' });
+  }
 
-  <script>
-    const video = document.getElementById('camera');
-    const scoreText = document.getElementById('score');
-    const detailsText = document.getElementById('details');
-    const scanBtn = document.getElementById('scanBtn');
+  const { imageBase64 } = req.body;
 
-    async function startCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        video.srcObject = stream;
-      } catch (err) {
-        alert("Kamera konnte nicht gestartet werden: " + err);
-      }
+  if (!imageBase64) {
+    return res.status(400).json({ error: 'No image data provided' });
+  }
+
+  try {
+    const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "Du bist ein Ernährungs-Experte. Antworte im JSON-Format mit 'score' (1-10) und 'details' (kurze Bewertung)."
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Bewerte dieses Produkt" },
+              { type: "image_url", image_url: `data:image/jpeg;base64,${imageBase64}` }
+            ]
+          }
+        ],
+        response_format: { type: "json_object" }
+      })
+    });
+
+    const data = await apiRes.json();
+
+    if (!apiRes.ok) {
+      return res.status(apiRes.status).json({ error: data.error?.message || "API request failed" });
     }
 
-    async function captureImage() {
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      return canvas.toDataURL('image/jpeg').split(',')[1]; // Nur Base64-Teil
+    let parsed;
+    try {
+      parsed = JSON.parse(data.choices[0].message.content);
+    } catch {
+      return res.status(500).json({ error: "Invalid JSON from AI" });
     }
 
-    async function analyse() {
-      scoreText.textContent = "Gesundheits-Score: ⏳";
-      detailsText.textContent = "Analysiere...";
+    res.status(200).json({
+      score: parsed.score,
+      details: parsed.details
+    });
 
-      const imageBase64 = await captureImage();
-
-      try {
-        const res = await fetch("/api/analyse", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageBase64 })
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          scoreText.textContent = "Gesundheits-Score: " + (data.score || "Keine Angabe");
-          detailsText.textContent = data.details || JSON.stringify(data);
-        } else {
-          scoreText.textContent = "Fehler";
-          detailsText.textContent = data.error || "Unbekannter Fehler";
-        }
-      } catch (err) {
-        scoreText.textContent = "Fehler";
-        detailsText.textContent = err.message;
-      }
-    }
-
-    scanBtn.addEventListener('click', analyse);
-
-    startCamera();
-  </script>
-</body>
-</html>
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
