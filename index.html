@@ -1,59 +1,144 @@
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Only POST requests allowed' });
-  }
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Health Scan Dashboard</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #121212;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .dashboard {
+      display: flex;
+      flex-direction: column;
+      background: #1e1e1e;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(0,0,0,0.6);
+      width: 95%;
+      max-width: 1000px;
+    }
+    @media(min-width: 768px) {
+      .dashboard {
+        flex-direction: row;
+      }
+    }
+    .video-section, .info-section {
+      flex: 1;
+      padding: 20px;
+    }
+    video {
+      width: 100%;
+      border-radius: 8px;
+      background: black;
+    }
+    h1 {
+      margin-top: 0;
+      font-size: 1.8rem;
+    }
+    .score {
+      font-size: 2rem;
+      font-weight: bold;
+      margin: 20px 0 10px;
+    }
+    .details {
+      font-size: 1rem;
+      color: #ccc;
+      line-height: 1.4;
+    }
+    button {
+      background: #00c853;
+      color: white;
+      border: none;
+      padding: 15px;
+      font-size: 1.1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 20px;
+      width: 100%;
+      transition: 0.2s;
+    }
+    button:hover {
+      background: #00e676;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard">
+    <div class="video-section">
+      <video id="camera" autoplay playsinline></video>
+      <button id="scanBtn">📷 Analysieren</button>
+    </div>
+    <div class="info-section">
+      <h1>Health Scan Dashboard</h1>
+      <div id="score" class="score">Gesundheits-Score: -</div>
+      <div id="details" class="details">Bitte Kamera auf ein Produkt richten und auf „Analysieren“ klicken.</div>
+    </div>
+  </div>
 
-  const { imageBase64 } = req.body;
+  <script>
+    const video = document.getElementById('camera');
+    const scoreText = document.getElementById('score');
+    const detailsText = document.getElementById('details');
+    const scanBtn = document.getElementById('scanBtn');
 
-  if (!imageBase64) {
-    return res.status(400).json({ error: 'No image data provided' });
-  }
-
-  try {
-    const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: "Du bist ein Ernährungs-Experte. Antworte im JSON-Format mit 'score' (1-10) und 'details' (kurze Bewertung)."
-          },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Bewerte dieses Produkt" },
-              { type: "image_url", image_url: `data:image/jpeg;base64,${imageBase64}` }
-            ]
-          }
-        ],
-        response_format: { type: "json_object" }
-      })
-    });
-
-    const data = await apiRes.json();
-
-    if (!apiRes.ok) {
-      return res.status(apiRes.status).json({ error: data.error?.message || "API request failed" });
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { exact: "environment" } }
+        });
+        video.srcObject = stream;
+      } catch (err) {
+        alert("Kamera konnte nicht gestartet werden: " + err);
+      }
     }
 
-    let parsed;
-    try {
-      parsed = JSON.parse(data.choices[0].message.content);
-    } catch {
-      return res.status(500).json({ error: "Invalid JSON from AI" });
+    async function captureImage() {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/jpeg').split(',')[1];
     }
 
-    res.status(200).json({
-      score: parsed.score,
-      details: parsed.details
-    });
+    async function analyse() {
+      scoreText.textContent = "Gesundheits-Score: ⏳";
+      detailsText.textContent = "Analysiere...";
 
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-}
+      const imageBase64 = await captureImage();
+
+      try {
+        const res = await fetch("/api/analyse", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageBase64 })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          scoreText.textContent = "Gesundheits-Score: " + (data.score ?? "-");
+          detailsText.textContent = data.details ?? "Keine Details verfügbar.";
+        } else {
+          scoreText.textContent = "Fehler";
+          detailsText.textContent = data.error || "Unbekannter Fehler";
+        }
+      } catch (err) {
+        scoreText.textContent = "Fehler";
+        detailsText.textContent = err.message;
+      }
+    }
+
+    scanBtn.addEventListener('click', analyse);
+    startCamera();
+  </script>
+</body>
+</html>
