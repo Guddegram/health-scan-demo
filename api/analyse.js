@@ -1,12 +1,16 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Only POST requests allowed' });
+  }
+
+  const { imageBase64 } = req.body;
+
+  if (!imageBase64) {
+    return res.status(400).json({ error: 'No image data provided' });
   }
 
   try {
-    const { imageBase64 } = req.body;
-
-    const apiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+    const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -17,7 +21,7 @@ export default async function handler(req, res) {
         messages: [
           {
             role: "system",
-            content: "Du bist ein Ernährungs-Experte. Bewerte das Produkt auf einer Skala von 1 bis 10 (10 = sehr gesund) und nenne kurz 2 Vorteile und 2 Nachteile."
+            content: "Du bist ein Ernährungs-Experte. Antworte im JSON-Format mit 'score' (1-10) und 'details' (kurze Bewertung)."
           },
           {
             role: "user",
@@ -26,12 +30,28 @@ export default async function handler(req, res) {
               { type: "image_url", image_url: `data:image/jpeg;base64,${imageBase64}` }
             ]
           }
-        ]
+        ],
+        response_format: { type: "json_object" }
       })
     });
 
     const data = await apiRes.json();
-    res.status(200).json(data);
+
+    if (!apiRes.ok) {
+      return res.status(apiRes.status).json({ error: data.error?.message || "API request failed" });
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(data.choices[0].message.content);
+    } catch {
+      return res.status(500).json({ error: "Invalid JSON from AI" });
+    }
+
+    res.status(200).json({
+      score: parsed.score,
+      details: parsed.details
+    });
 
   } catch (error) {
     res.status(500).json({ error: error.message });
