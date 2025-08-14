@@ -1,59 +1,54 @@
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Only POST requests allowed' });
-  }
-
-  const { imageBase64 } = req.body;
-
-  if (!imageBase64) {
-    return res.status(400).json({ error: 'No image data provided' });
-  }
+  if (req.method !== "POST") return res.status(405).json({ error: "Only POST" });
+  const { imageBase64, hint = "" } = req.body || {};
+  if (!imageBase64) return res.status(400).json({ error: "No image data provided" });
 
   try {
-    const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: 'POST',
+    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
+        response_format: { type: "json_object" },
         messages: [
           {
             role: "system",
-            content: "Du bist ein Ernährungs-Experte. Antworte im JSON-Format mit 'score' (1-10) und 'details' (kurze Bewertung)."
+            content:
+              "Du bist Ernährungsberater. Analysiere das Produkt auf dem Bild. Gib NUR JSON mit Feldern: "+
+              "{ score:number(1-10), pros:string[], cons:string[], summary:string }. "+
+              "score: 10=sehr gesund, 1=sehr ungesund. Kurz und prägnant."
           },
           {
             role: "user",
             content: [
-              { type: "text", text: "Bewerte dieses Produkt" },
+              { type: "text", text: `Bewerte dieses Produkt. Hinweis: ${hint}`.slice(0,200) },
               { type: "image_url", image_url: `data:image/jpeg;base64,${imageBase64}` }
             ]
           }
-        ],
-        response_format: { type: "json_object" }
+        ]
       })
     });
 
-    const data = await apiRes.json();
-
-    if (!apiRes.ok) {
-      return res.status(apiRes.status).json({ error: data.error?.message || "API request failed" });
-    }
+    const json = await r.json();
+    if (!r.ok) return res.status(r.status).json({ error: json.error?.message || "OpenAI error" });
 
     let parsed;
-    try {
-      parsed = JSON.parse(data.choices[0].message.content);
-    } catch {
-      return res.status(500).json({ error: "Invalid JSON from AI" });
-    }
+    try { parsed = JSON.parse(json.choices[0].message.content); }
+    catch { return res.status(500).json({ error: "Invalid JSON from model" }); }
 
-    res.status(200).json({
-      score: parsed.score,
-      details: parsed.details
-    });
+    // Minimal-Validierung
+    const out = {
+      score: Number(parsed.score ?? 0),
+      pros: Array.isArray(parsed.pros) ? parsed.pros.slice(0,5) : [],
+      cons: Array.isArray(parsed.cons) ? parsed.cons.slice(0,5) : [],
+      summary: String(parsed.summary || "")
+    };
+    return res.status(200).json(out);
 
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } catch (e) {
+    return res.status(500).json({ error: e.message || "proxy error" });
   }
 }
