@@ -8,6 +8,8 @@
 <body>
   <h1>📷 Health Scan Demo</h1>
   <video id="camera" autoplay playsinline width="300"></video>
+  <br />
+  <button id="scanBtn">Analysieren</button>
   <p id="score">Gesundheits-Score: -</p>
   <p id="details"></p>
 
@@ -15,25 +17,57 @@
     const video = document.getElementById('camera');
     const scoreText = document.getElementById('score');
     const detailsText = document.getElementById('details');
+    const scanBtn = document.getElementById('scanBtn');
 
-    // Kamera starten
     async function startCamera() {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      video.srcObject = stream;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+      } catch (err) {
+        alert("Kamera konnte nicht gestartet werden: " + err);
+      }
     }
+
+    async function captureImage() {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/jpeg').split(',')[1]; // Nur Base64-Teil
+    }
+
+    async function analyse() {
+      scoreText.textContent = "Gesundheits-Score: ⏳";
+      detailsText.textContent = "Analysiere...";
+
+      const imageBase64 = await captureImage();
+
+      try {
+        const res = await fetch("/api/analyse", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageBase64 })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          scoreText.textContent = "Gesundheits-Score: " + (data.score || "Keine Angabe");
+          detailsText.textContent = data.details || JSON.stringify(data);
+        } else {
+          scoreText.textContent = "Fehler";
+          detailsText.textContent = data.error || "Unbekannter Fehler";
+        }
+      } catch (err) {
+        scoreText.textContent = "Fehler";
+        detailsText.textContent = err.message;
+      }
+    }
+
+    scanBtn.addEventListener('click', analyse);
 
     startCamera();
-
-    // Platzhalter: Später hier API-Aufruf zu OpenAI Vision einbauen
-    function mockAnalyse() {
-      const randomScore = Math.floor(Math.random() * 10) + 1;
-      scoreText.textContent = `Gesundheits-Score: ${randomScore}`;
-      detailsText.textContent = randomScore > 5 
-        ? "✅ Viele Vorteile – wahrscheinlich gesund."
-        : "⚠️ Enthält eher ungesunde Bestandteile.";
-    }
-
-    setInterval(mockAnalyse, 3000);
   </script>
 </body>
 </html>
