@@ -6,32 +6,32 @@
   <title>HealthyScan — Web App</title>
 
   <!-- PWA -->
-  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#10b981" />
-  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="HealthyScan" />
+  <link rel="icon" href="icons/icon-192.png" />
 
-  <!-- Minimal Styles optional -->
   <style>
     body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:0}
     header{padding:16px;background:#10b981;color:#fff}
     main{padding:20px}
-    .btn{display:inline-block;padding:10px 14px;border:1px solid #10b981;border-radius:10px}
+    .btn{display:inline-block;padding:10px 14px;border:1px solid #10b981;border-radius:10px;text-decoration:none}
   </style>
 </head>
 <body>
   <header>HealthyScan</header>
   <main>
     <p>Willkommen! Diese App ist als PWA installierbar.</p>
-    <a class="btn" href="/manifest.webmanifest">Manifest ansehen</a>
+    <a class="btn" href="manifest.webmanifest">Manifest ansehen</a>
   </main>
 
-  <!-- Service Worker Registrierung -->
+  <!-- Service Worker Registrierung (relative Pfade!) -->
   <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js');
+      navigator.serviceWorker.register('sw.js');
     });
   }
   </script>
