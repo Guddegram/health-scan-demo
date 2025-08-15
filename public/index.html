@@ -1,247 +1,39 @@
 <!doctype html>
 <html lang="de">
 <head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>HealthyScan – Web App</title>
-<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#10b981">
-<link rel="apple-touch-icon" href="/icons/icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes">
-<style>
-:root{--bg:#f6f7fb;--card:#fff;--ink:#0f172a;--muted:#6b7280;--ok:#10b981;--bd:#e5e7eb}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,Inter,Segoe UI}
-.wrap{max-width:1100px;margin:0 auto;padding:18px;display:grid;gap:14px}
-.grid{display:grid;gap:14px}@media(min-width:980px){.grid{grid-template-columns:1.1fr .9fr}}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;box-shadow:0 4px 16px rgba(15,23,42,.05)}
-.hd{padding:12px 14px;border-bottom:1px solid var(--bd);font-weight:700}.bd{padding:14px}
-video{width:100%;display:block;border-radius:10px;background:#000}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-.btn{border:1px solid var(--bd);border-radius:10px;padding:10px 14px;background:#fff;font-weight:700;cursor:pointer}
-.primary{background:var(--ok);border-color:var(--ok);color:#052e1a}
-.muted{color:var(--muted)}.chips{display:flex;gap:8px;flex-wrap:wrap}.chip{border:1px solid var(--bd);padding:6px 10px;border-radius:999px;font-size:12px;background:#fff}
-.switch{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--bd);border-radius:10px;padding:9px 12px}
-.switch input{width:38px;height:22px;appearance:none;background:#e5e7eb;border-radius:999px;position:relative;cursor:pointer}
-.switch input:checked{background:var(--ok)}.switch input::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:.2s}
-.switch input:checked::after{left:19px}
-.score{font-size:30px;font-weight:800;margin:4px 0}
-progress{width:100%;height:10px;appearance:none}progress::-webkit-progress-bar{background:#eef2f7;border-radius:8px}
-progress::-webkit-progress-value{background:linear-gradient(90deg,#34d399,#22c55e);border-radius:8px}
-input[type=text],input[type=number]{width:100%;border:1px solid var(--bd);border-radius:10px;padding:10px}
-.table{width:100%;border-collapse:collapse} .table th,.table td{border-bottom:1px solid var(--bd);padding:8px 6px;text-align:left}
-.badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef2f7;color:#334155;font-size:12px}
-.right{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HealthyScan — Web App</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#10b981" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="HealthyScan" />
+
+  <!-- Minimal Styles optional -->
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:0}
+    header{padding:16px;background:#10b981;color:#fff}
+    main{padding:20px}
+    .btn{display:inline-block;padding:10px 14px;border:1px solid #10b981;border-radius:10px}
+  </style>
 </head>
 <body>
-<div class="wrap">
+  <header>HealthyScan</header>
+  <main>
+    <p>Willkommen! Diese App ist als PWA installierbar.</p>
+    <a class="btn" href="/manifest.webmanifest">Manifest ansehen</a>
+  </main>
 
-  <div class="grid">
-    <!-- Live Camera -->
-    <section class="card">
-      <div class="hd">Live Camera</div>
-      <div class="bd">
-        <video id="cam" autoplay playsinline muted></video>
-        <div class="row">
-          <button class="btn" id="startBtn">Start/Wechsel Kamera</button>
-          <button class="btn primary" id="scanBtn">📷 Jetzt analysieren</button>
-        </div>
-        <div class="muted" id="hint" style="margin-top:8px"></div>
-      </div>
-    </section>
-
-    <!-- Scan Settings -->
-    <section class="card">
-      <div class="hd">Scan Settings</div>
-      <div class="bd" style="display:grid;gap:10px">
-        <label class="switch"><span>Auto‑Bewertung in Echtzeit</span><input id="autoToggle" type="checkbox"></label>
-        <label class="switch"><span>Voice‑Feedback (Deutsch)</span><input id="voiceToggle" type="checkbox"></label>
-        <div>
-          <div class="muted">Produkt‑Hinweis (optional, z. B. „granola bar, wenig Zucker“)</div>
-          <input id="hintInput" type="text" placeholder="Produktname oder kurze Beschreibung">
-        </div>
-        <div class="chips">
-          <span class="chip" id="modeChip">Manuell</span>
-          <span class="chip">Update: 900 ms</span>
-        </div>
-      </div>
-    </section>
-  </div>
-
-  <!-- Ergebnis -->
-  <section class="card">
-    <div class="hd">Ergebnis</div>
-    <div class="bd" style="display:grid;gap:10px">
-      <div class="right muted">
-        <span id="prodName" class="badge">–</span>
-        <span id="serving" class="badge">Portion: –</span>
-        <span id="kcalBadge" class="badge">≈ 0 kcal/Portion</span>
-      </div>
-      <div class="score" id="score">–</div>
-      <progress id="bar" max="10" value="0"></progress>
-      <div id="summary" class="muted">Richte die Kamera auf ein Produkt und tippe „Jetzt analysieren“.</div>
-
-      <div class="row">
-        <div>
-          <b>Vorteile</b>
-          <ul id="pros" class="muted" style="margin:6px 0 0 18px"></ul>
-        </div>
-        <div>
-          <b>Nachteile</b>
-          <ul id="cons" class="muted" style="margin:6px 0 0 18px"></ul>
-        </div>
-      </div>
-
-      <div class="row">
-        <div>
-          <label class="muted">Kalorien (bearbeitbar) – wird für das Tracking gespeichert</label>
-          <input id="kcalInput" type="number" min="0" step="1" placeholder="kcal pro Portion">
-        </div>
-        <div style="display:grid;align-items:end">
-          <button class="btn primary" id="saveEntryBtn">➕ Als Eintrag speichern</button>
-        </div>
-      </div>
-
-      <div id="err" style="color:#b91c1c;font-weight:600"></div>
-    </div>
-  </section>
-
-  <!-- Profil & Tracking -->
-  <section class="card">
-    <div class="hd">Profil & Tracking</div>
-    <div class="bd" style="display:grid;gap:10px">
-      <div class="row">
-        <div>
-          <label class="muted">Tägliches Kalorien‑Ziel</label>
-          <input id="goalInput" type="number" min="500" step="50" placeholder="z. B. 2200">
-        </div>
-        <div style="display:grid;align-items:end">
-          <button class="btn" id="saveGoalBtn">Ziel speichern</button>
-        </div>
-      </div>
-
-      <div class="right">
-        <span class="badge">Heute: <b id="todaySum">0</b> kcal</span>
-        <span class="badge">Verbleibend: <b id="remainToday">0</b> kcal</span>
-        <select id="rangeSel" class="btn" style="padding:8px 10px">
-          <option value="day">Tag</option>
-          <option value="week">Woche</option>
-          <option value="month">Monat</option>
-        </select>
-        <button class="btn" id="clearBtn">Verlauf löschen</button>
-      </div>
-
-      <div style="overflow:auto">
-        <table class="table" id="logTable">
-          <thead><tr><th>Datum/Zeit</th><th>Produkt</th><th>Portion</th><th>Kcal</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-</div>
-
-<script>
-if("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
-
-let stream=null, back=true, loopId=null;
-const $=id=>document.getElementById(id);
-const v=$("cam"), err=$("err"), hint=$("hint");
-
-function speak(t){ if(!$("voiceToggle").checked) return; try{ const u=new SpeechSynthesisUtterance(t); u.lang="de-DE"; speechSynthesis.cancel(); speechSynthesis.speak(u);}catch{} }
-
-async function startCamera(){
-  try{
-    if(stream) stream.getTracks().forEach(t=>t.stop());
-    const c={ video:{ facingMode:{ ideal: back?"environment":"user" } } };
-    stream=await navigator.mediaDevices.getUserMedia(c);
-    v.srcObject=stream;
-    await new Promise(r=> v.videoWidth ? r() : v.addEventListener("loadedmetadata", r, {once:true}));
-    hint.textContent=`Kamera aktiv (${back?"Rück":"Front"}) • ${v.videoWidth}×${v.videoHeight}`;
-  }catch(e){ err.textContent="Kamera‑Fehler: "+e.message; }
-}
-
-async function frameBase64(){
-  if(!v.videoWidth) await new Promise(r=>v.addEventListener("loadedmetadata", r, {once:true}));
-  const c=document.createElement("canvas"); c.width=v.videoWidth; c.height=v.videoHeight;
-  c.getContext("2d").drawImage(v,0,0,c.width,c.height);
-  return c.toDataURL("image/jpeg",0.9).split(",")[1];
-}
-
-function renderList(el,items){ el.innerHTML=(items||[]).map(x=>`<li>${x}</li>`).join("") }
-
-function renderResult(r){
-  err.textContent="";
-  const sc=Number(r.score||0);
-  $("score").textContent=isNaN(sc)?"–":`${sc}/10`;
-  $("bar").value=isNaN(sc)?0:sc;
-  $("summary").textContent=r.summary||"";
-  $("prodName").textContent=r.name||"–";
-  $("serving").textContent=r.serving_desc?`Portion: ${r.serving_desc}`:"Portion: –";
-  const kcal = Number(r.calories_per_serving||0);
-  $("kcalBadge").textContent=`≈ ${kcal} kcal/Portion`;
-  $("kcalInput").value = isNaN(kcal)? "": kcal;
-  renderList($("pros"), r.pros);
-  renderList($("cons"), r.cons);
-  speak(`Wertung ${isNaN(sc)?0:sc} von 10. ${r.summary||""}`);
-}
-
-async function analyzeOnce(){
-  $("summary").textContent="Analysiere…"; err.textContent="";
-  try{
-    const res=await fetch("/api/analyse",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({ imageBase64: await frameBase64(), hint:$("hintInput").value||"" })});
-    const data=await res.json(); if(!res.ok) throw new Error(data.error||"API‑Fehler");
-    renderResult(data);
-  }catch(e){ err.textContent=e.message; }
-}
-
-$("scanBtn").addEventListener("click", analyzeOnce);
-$("startBtn").addEventListener("click", ()=>{ back=!back; startCamera(); });
-$("autoToggle").addEventListener("change",()=>{ if($("autoToggle").checked){ $("modeChip").textContent="Echtzeit"; loopId=setInterval(analyzeOnce,900);} else { $("modeChip").textContent="Manuell"; clearInterval(loopId);} });
-
-/* ===== Tracking (localStorage) ===== */
-const LS_ENTRIES="hs_entries"; const LS_GOAL="hs_goal";
-function loadEntries(){ try{return JSON.parse(localStorage.getItem(LS_ENTRIES)||"[]");}catch{return[]} }
-function saveEntries(a){ localStorage.setItem(LS_ENTRIES, JSON.stringify(a)); }
-function loadGoal(){ return Number(localStorage.getItem(LS_GOAL)||2000); }
-function saveGoal(n){ localStorage.setItem(LS_GOAL, String(n)); }
-
-function startOfRange(type, d=new Date()){
-  const dt=new Date(d);
-  if(type==="day"){ dt.setHours(0,0,0,0); return dt; }
-  if(type==="week"){ const day=dt.getDay(); const diff=(day===0?6:day-1); dt.setDate(dt.getDate()-diff); dt.setHours(0,0,0,0); return dt; } // Mo‑Start
-  if(type==="month"){ dt.setDate(1); dt.setHours(0,0,0,0); return dt; }
-  return dt;
-}
-
-function refreshProfile(){
-  const goal=loadGoal(); $("goalInput").value=goal;
-  const entries=loadEntries();
-  const from=startOfRange($("rangeSel").value);
-  const rows=entries.filter(e=> new Date(e.ts)>=from);
-  const today=startOfRange("day"); const todayRows=entries.filter(e=> new Date(e.ts)>=today);
-  const todaySum=todayRows.reduce((s,e)=>s+Number(e.kcal||0),0);
-  $("todaySum").textContent=todaySum;
-  $("remainToday").textContent=Math.max(goal-todaySum,0);
-
-  const tbody=$("logTable").querySelector("tbody"); tbody.innerHTML="";
-  rows.sort((a,b)=> new Date(b.ts)-new Date(a.ts)).forEach(e=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${new Date(e.ts).toLocaleString()}</td><td>${e.name||"-"}</td><td>${e.serving||"-"}</td><td>${e.kcal||0}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-$("saveGoalBtn").addEventListener("click", ()=>{ const n=Number($("goalInput").value||0); if(n>=500){ saveGoal(n); refreshProfile(); }});
-$("rangeSel").addEventListener("change", refreshProfile);
-$("clearBtn").addEventListener("click", ()=>{ if(confirm("Alle Einträge löschen?")){ saveEntries([]); refreshProfile(); }});
-
-$("saveEntryBtn").addEventListener("click", ()=>{
-  const kcal=Number($("kcalInput").value||0);
-  const entry={ ts:new Date().toISOString(), name:$("prodName").textContent, serving:$("serving").textContent.replace("Portion: ",""), kcal };
-  const all=loadEntries(); all.push(entry); saveEntries(all); refreshProfile();
-});
-
-startCamera(); refreshProfile();
-</script>
+  <!-- Service Worker Registrierung -->
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js');
+    });
+  }
+  </script>
 </body>
 </html>
